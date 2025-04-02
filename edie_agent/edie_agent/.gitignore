@@ -1,0 +1,16 @@
+.env
+.pyc
+.vscode
+**/__pycache__/
+
+# Created by https://www.toptal.com/developers/gitignore/api/ros2
+# Edit at https://www.toptal.com/developers/gitignore?templates=ros2
+
+### ROS2 ###
+install/
+log/
+build/
+
+# Colcon custom files
+COLCON_IGNORE
+AMENT_IGNORE

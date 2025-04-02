@@ -1,0 +1,11 @@
+
+python-dotenv 
+pyinputplus 
+rich 
+langchain
+langchain_openai
+langchain_ollama
+langchain_community
+numpy==1.24 
+ultralytics
+matplotlib

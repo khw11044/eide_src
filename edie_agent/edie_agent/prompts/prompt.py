@@ -40,7 +40,7 @@ def get_prompts():
             "When a specific distance or number of meters is specified, you must use the 'move_to_position' tool."
             "If the robot fails to reach the target, perform 'move_to_position' again multiple times. "
             "To rotate in place, use 'rotation_in_place'. "
-            "For simple movements, use 'simple_move'."
+            "For simple movement instruction, use 'simple_move'."
         ),
         
         constraints_and_guardrails=(

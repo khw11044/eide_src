@@ -148,7 +148,7 @@ class CustomRobotNode(Node):
         # yaw_error = (self.target_yaw - yaw + 2 * math.pi) % (2 * math.pi)
         yaw_error = (self.target_yaw - yaw + math.pi) % (2 * math.pi) - math.pi
 
-        self.get_logger().info(f"yaw_error: {yaw_error}")
+        # self.get_logger().info(f"yaw_error: {yaw_error}")
 
         return {
             "yaw_error": yaw_error
@@ -419,6 +419,7 @@ def simple_move(linear_x: float, angular_z: float, duration: float) -> str:
     """
     agent = _get_robot_node()
     start_time = time.time()
+    
 
     while True:
         x, y, yaw = agent.current_position

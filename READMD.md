@@ -37,3 +37,20 @@ ros2 run edie_agent edie_agent
 ```
 ros2 pkg list | grep edie_agent
 ```
+
+
+### 키보드 원격 제어 
+
+```
+ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r /cmd_vel:=/edie8/diff_drive_controller/cmd_vel_unstamped
+```
+
+### 에디 상태 및 모터 제어 GUI 
+
+```
+ros2 run edie8_test_gui edie8_test_gui
+```
+
+```
+ros2 topic pub /edie8/diff_drive_controller/cmd_vel_unstamped geometry_msgs/msg/Twist "{linear: {x: 2.2, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"
+```

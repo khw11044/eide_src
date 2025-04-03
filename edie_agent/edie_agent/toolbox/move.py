@@ -347,7 +347,7 @@ def move_to_position(target_x: float, target_y: float, target_yaw: float) -> str
                     f"목표 위치 ({target_x:.2f}, {target_y:.2f}), "
                     f"목표 각도 {target_yaw:.2f} rad 도달.")
 
-        # 후진 고려: 로봇의 헤딩과 목표 방향의 각차이가 90도(π/2)보다 크면, 목표가 후방에 있으므로 후진
+        # 후진 고려: 로봇의 헤딩과 목표 방향의 각차이가 90도(π/2:1.57)보다 크면, 목표가 후방에 있으므로 후진
         if abs(yaw_err) > (math.pi / 2):
             linear_speed = -min(3.0, max(1.0, distance_err * 2))
             # 각속도도 부호 반전 (로봇이 목표 방향을 맞추도록)

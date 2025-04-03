@@ -48,20 +48,43 @@ def variance(numbers: List[float]) -> float:
     return statistics.variance(numbers)
 
 
+
 @tool
 def add(xy_pairs: List[tuple]) -> List[dict]:
-    """Performs addition on the input values x and y.
-
-    :arg xy_pairs: A list of tuples containing the input values x and y (e.g. [(x1, y1), (x2, y2), ...])
+    """
+    Performs addition on the input values x and y.
+    
+    :arg xy_pairs: A list containing tuples, lists, or string representations of tuples/lists
+                   with two numbers (e.g. [(x1, y1), [x2, y2], "[(x3, y3)]", ...]).
+    :return: A list of dictionaries where each dictionary has a key formatted as "x+y" and the corresponding sum.
     """
     results = []
-    for x, y in xy_pairs:
-        result = {
-            f"{x}+{y}": x + y,
-        }
+    for pair in xy_pairs:
+        # If pair is already a tuple or list, use it directly.
+        if isinstance(pair, (tuple, list)):
+            parsed_pair = pair
+        elif isinstance(pair, str):
+            # Try to safely evaluate the string to a tuple or list.
+            try:
+                parsed_pair = ast.literal_eval(pair)
+            except Exception as e:
+                raise ValueError(f"Invalid string format for pair: {pair}") from e
+        else:
+            raise ValueError(f"Unsupported type {type(pair)} for pair: {pair}")
+        
+        # Check that parsed_pair has exactly two elements.
+        if not isinstance(parsed_pair, (tuple, list)) or len(parsed_pair) != 2:
+            raise ValueError(f"Each element must contain exactly two numbers, got: {parsed_pair}")
+        
+        # Convert each value to float.
+        try:
+            x, y = float(parsed_pair[0]), float(parsed_pair[1])
+        except Exception as e:
+            raise ValueError(f"Cannot convert pair values to float: {parsed_pair}") from e
+
+        result = {f"{x}+{y}": x + y}
         results.append(result)
     return results
-
 
 @tool
 def subtract(xy_pairs: List[tuple]) -> List[dict]:
@@ -70,10 +93,30 @@ def subtract(xy_pairs: List[tuple]) -> List[dict]:
     :arg xy_pairs: A list of tuples containing the input values x and y (e.g. [(x1, y1), (x2, y2), ...])
     """
     results = []
-    for x, y in xy_pairs:
-        result = {
-            f"{x}-{y}": x - y,
-        }
+    for pair in xy_pairs:
+        # If pair is already a tuple or list, use it directly.
+        if isinstance(pair, (tuple, list)):
+            parsed_pair = pair
+        elif isinstance(pair, str):
+            # Try to safely evaluate the string to a tuple or list.
+            try:
+                parsed_pair = ast.literal_eval(pair)
+            except Exception as e:
+                raise ValueError(f"Invalid string format for pair: {pair}") from e
+        else:
+            raise ValueError(f"Unsupported type {type(pair)} for pair: {pair}")
+        
+        # Check that parsed_pair has exactly two elements.
+        if not isinstance(parsed_pair, (tuple, list)) or len(parsed_pair) != 2:
+            raise ValueError(f"Each element must contain exactly two numbers, got: {parsed_pair}")
+        
+        # Convert each value to float.
+        try:
+            x, y = float(parsed_pair[0]), float(parsed_pair[1])
+        except Exception as e:
+            raise ValueError(f"Cannot convert pair values to float: {parsed_pair}") from e
+
+        result = {f"{x}-{y}": x - y}
         results.append(result)
     return results
 
@@ -101,6 +144,7 @@ def divide(xy_pairs: List[tuple]) -> List[dict]:
     """
     results = []
     for x, y in xy_pairs:
+        x,y = float(x), float(y)
         result = {
             f"{x}/{y}": x / y if y != 0 else "undefined",
         }
@@ -116,6 +160,7 @@ def exponentiate(xy_pairs: List[tuple]) -> List[dict]:
     """
     results = []
     for x, y in xy_pairs:
+        x,y = float(x), float(y)
         result = {
             f"{x}^{y}": x**y,
         }
@@ -131,6 +176,7 @@ def modulo(xy_pairs: List[tuple]) -> List[dict]:
     """
     results = []
     for x, y in xy_pairs:
+        x,y = float(x), float(y)
         result = {
             f"{x}%{y}": x % y if y != 0 else "undefined",
         }

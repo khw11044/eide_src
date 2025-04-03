@@ -11,9 +11,9 @@ def get_llm(streaming: bool = False, local=False):
     dotenv.load_dotenv(dotenv.find_dotenv())
 
     if local:
-        llm = ChatOllama(model="llama3.2:3b", temperature=0)
+        llm = ChatOllama(model="llama3.2:3b", temperature=0.1)
     else:
-        llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0)
+        llm = ChatOpenAI(model_name="gpt-4o", temperature=0.1)
 
     return llm
 

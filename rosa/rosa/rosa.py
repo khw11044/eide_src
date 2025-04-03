@@ -178,6 +178,8 @@ class ROSA:
             tools=self.__tools.get_tools(),
             stream_runnable=self.__streaming,
             verbose=verbose,
+            # max_iterations=5,               # 실행 루프를 종료하기 전 최대 단계 수 -> 다섯 단계만 
+            # max_execution_time=20,          # 실행 루프에 소요될 수 있는 최대 시간
         )
         return executor
 

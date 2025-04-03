@@ -25,6 +25,7 @@ class CustomRobotNode(Node):
         # 목표 위치 (Agent가 활용할 수 있도록 보관만 함)
         self.target_x = None
         self.target_y = None
+        self.target_yaw = None
 
         # 이동 제어용 플래그, 속도, 시간 변수
         self.move_flag = False
@@ -87,34 +88,67 @@ class CustomRobotNode(Node):
         else:
             self.deviance = 0
 
-    def set_target_position(self, target_x: float, target_y: float):
+    def set_target_position(self, target_x: float, target_y: float, target_yaw: float):
         """목표 위치를 저장만 함 (실제 이동은 move_to_position에서 제어)."""
         self.target_x = target_x
         self.target_y = target_y
-        self.get_logger().info(f"목표 위치 설정: ({target_x:.2f}, {target_y:.2f})")
+        self.target_yaw = target_yaw
+        self.get_logger().info(f"목표 위치 설정: ({target_x:.2f}, {target_y:.2f}, {target_yaw:.2f})")
 
     def error_calculate(self) -> dict:
         """
         목표 위치( self.target_x, self.target_y )로부터의 거리/각도 오차 계산.
         """
-        if self.target_x is None or self.target_y is None:
-            return {"distance_error": 0.0, "angle_error": 0.0}
+        if self.target_x is None or self.target_y is None or self.target_yaw is None:
+            return {"distance_error": 0.0, "angle_error": 0.0, "yaw_error": 0.0}
 
         x, y, yaw = self.current_position
         dx = self.target_x - x
         dy = self.target_y - y
-        distance = math.sqrt(dx**2 + dy**2)
+
+        # 목표 이동 거리 계산
+        distance = round(math.sqrt(dx**2 + dy**2), 4)
 
         # 목표 각도 계산
         target_angle = math.atan2(dy, dx)
         angle_error = (target_angle - yaw + 2 * math.pi) % (2 * math.pi)
         if angle_error > math.pi:
             angle_error -= 2 * math.pi
+        angle_error = round(angle_error, 4)
+
+        # 목표 yaw 오차 계산 (-π ~ π 보정)
+        # yaw_error = (self.target_yaw - yaw + 2 * math.pi) % (2 * math.pi)
+        yaw_error = (self.target_yaw - yaw + math.pi) % (2 * math.pi) - math.pi
+
+        self.get_logger().info(f"distance_error: {distance}")
+        self.get_logger().info(f"angle_error: {angle_error}")
+        # self.get_logger().info(f"yaw_error: {yaw_error}")
 
         return {
             "distance_error": distance,
-            "angle_error": angle_error
+            "angle_error": angle_error,
+            # "yaw_error": yaw_error
         }
+
+    def yaw_error_calculate(self) -> dict:
+        """
+        목표 위치( self.target_x, self.target_y )로부터의 거리/각도 오차 계산.
+        """
+        if self.target_yaw is None:
+            return {"yaw_error": 0.0}
+
+        x, y, yaw = self.current_position
+
+        # 목표 yaw 오차 계산 (-π ~ π 보정)
+        # yaw_error = (self.target_yaw - yaw + 2 * math.pi) % (2 * math.pi)
+        yaw_error = (self.target_yaw - yaw + math.pi) % (2 * math.pi) - math.pi
+
+        self.get_logger().info(f"yaw_error: {yaw_error}")
+
+        return {
+            "yaw_error": yaw_error
+        }
+    
 
     def publish_twist_to_cmd_vel(self, linear_x: float, angular_z: float, duration: float):
         """
@@ -219,49 +253,136 @@ def get_robot_pose() -> str:
 @tool
 def move_to_position(target_x: float, target_y: float, target_yaw: float) -> str:
     """
-    예: 목표 위치 (target_x, target_y)까지 이동한 뒤, target_yaw까지 회전.
-    내부에서 반복적으로 distance_error, angle_error를 계산하여 publish_twist_to_cmd_vel() 호출.
+    로봇을 특정 위치까지 이동하기 위해 해당 도구를 사용합니다.
+    현재 위치를 파악하고, 목표 위치 (target_x, target_y)까지 이동한 뒤, target_yaw까지 회전합니다.
+    예: 몇 m 앞으로 전진해, 어디 위치로 이동해
     """
     agent = _get_robot_node()
-    agent.set_target_position(target_x, target_y)
+    agent.set_target_position(target_x, target_y, target_yaw)
 
     # 1) 목표 위치까지 이동
     while True:
         errors = agent.error_calculate()
-        distance = errors["distance_error"]
+        distance_err = errors["distance_error"]
         angle_err = errors["angle_error"]
 
         # --- 도착 판정 ---
-        if distance < 0.05:
+        if distance_err < 0.1:
             agent.move_flag = False  # 이동 중지
             agent.cmd_vel_pub.publish(Twist())  # 즉시 정지
             break
 
-        # 거리 비례 제어로 선속도 결정 (0.05 ~ 0.3 사이)
-        linear_speed = min(0.3, max(0.05, distance * 2))
-        # 각속도 결정: angle_err * 2 (클램핑: -1.0 ~ 1.0)
-        angular_speed = max(-1.0, min(1.0, angle_err * 2))
+        # # 현재 바라보는 방향과 목표 방향의 차이 계산
+        # direction_diff = abs(angle_err)
 
-        # 짧은 시간(예: 0.05초)만큼 이동 명령
+        # # 방향 차이가 특정 각도(예: 135도 = 0.75π) 이상이면 후진 선택
+        # if direction_diff > 0.75:
+        #     linear_speed = -min(3.0, max(0.1, distance_err * 2))  # 후진
+        #     angular_speed = -max(-2.0, min(2.0, angle_err * 2))
+        # else:
+        #     linear_speed = min(3.0, max(0.1, distance_err * 2))  # 전진
+        #     angular_speed = max(-2.0, min(2.0, angle_err * 2))
+
+        if distance_err > 0:    # 전진
+            linear_speed = min(3.0, max(1.0, distance_err * 2))  
+            angular_speed = max(-2.0, min(2.0, angle_err * 2))
+        else:                   # 후진 
+            linear_speed = max(-3.0, min(-1.0, distance_err * 2))  
+            angular_speed = -max(-2.0, min(2.0, angle_err * 2))
+
+        # 짧은 시간(예: 0.05초)별로 이동 명령
         agent.publish_twist_to_cmd_vel(linear_speed, angular_speed, 0.05)
         time.sleep(0.05)  # 이동 명령 갱신 간격
 
     # 2) 목표 각도 회전
     while True:
-        x, y, yaw = agent.current_position
-        error = target_yaw - yaw
-        error = (error + math.pi) % (2 * math.pi) - math.pi  # -π ~ π로 보정
+        errors = agent.yaw_error_calculate()
+        yaw_err = errors["yaw_error"]
 
-        if abs(error) < 0.1:
+        if abs(yaw_err) < 0.1:
             agent.move_flag = False
             agent.cmd_vel_pub.publish(Twist())  # 즉시 정지
             return (f"이동 및 회전 완료: "
                     f"목표 위치 ({target_x:.2f}, {target_y:.2f}), "
                     f"목표 각도 {target_yaw:.2f} rad 도달.")
 
-        angular_speed = max(-1.0, min(1.0, error * 2))
-        agent.publish_twist_to_cmd_vel(0.0, angular_speed, 0.1)
+        angular_speed = max(-3.0, min(3.0, yaw_err * 2))
+        agent.publish_twist_to_cmd_vel(0.0, angular_speed, 0.05)
         time.sleep(0.1)
+
+
+@tool
+def rotation_in_place(target_yaw: float) -> str:
+    """
+    제자리 회전을 해야하는 경우 해당 도구를 사용합니다.
+    현재 위치를 파악하고, target_yaw까지 회전합니다.
+    예: 제자리에서 20도 회전해
+    """
+    agent = _get_robot_node()
+    current_x, current_y, current_yaw = agent.current_position
+
+    print(f"현재 각도: yaw={current_yaw:.2f}rad")
+    print(f"목표 각도: yaw={target_yaw:.2f}rad")
+
+    agent.set_target_position(0.0, 0.0, target_yaw)
+
+    while True:
+        errors = agent.error_calculate()
+        yaw_err = errors["yaw_error"]
+        if abs(yaw_err) < 0.1:  # 약 5.7도 이내
+            agent.move_flag = False
+            agent.cmd_vel_pub.publish(Twist())  # 즉시 정지
+            return (f"회전 완료: "
+                    f"목표 각도 {target_yaw:.2f} rad 도달.")
+
+        angular_speed = max(-3.0, min(3.0, yaw_err * 2))
+        agent.publish_twist_to_cmd_vel(0.01, angular_speed, 0.1)
+        time.sleep(0.1)
+
+
+@tool
+def face_detection(target_yaw: float) -> str:
+    """
+    예: 정면을 바라보게 회전하는 명령을 수행.
+    deviance(픽셀 단위 편차)에 따라 회전값 조정.
+    객체를 향해 제자리 회전할때 해당 도구를 사용합니다.
+    """
+    agent = _get_robot_node()
+
+    while True:
+        x, y, yaw = agent.current_position
+        error = agent.deviance
+
+        # 에러가 작으면 정지
+        if abs(error) < 10:
+            agent.move_flag = False
+            agent.cmd_vel_pub.publish(Twist())  # 정지
+            return (f"정면({target_yaw:.2f} rad) 바라봄")
+
+        logger.info(f"편차: {error}")
+        angular_speed = max(-4.0, min(4.0, error * 0.5))
+        agent.publish_twist_to_cmd_vel(0.0, angular_speed, 0.01)
+        time.sleep(0.01)
+
+
+# @tool
+# def move_detection(linear_x: float, angular_z: float, duration: float) -> str:
+#     """
+#     예: 대상으로 부터 멀리 떨어지거나, 가까이 다가가는 동작을 수행.
+#     """
+#     agent = _get_robot_node()
+#     start_time = time.time()
+
+#     while True:
+#         x, y, yaw = agent.current_position
+#         if (time.time()- start_time) > duration:
+#             agent.move_flag = False
+#             agent.cmd_vel_pub.publish(Twist())  # 정지
+#             return (f"이동 완료")
+        
+#         agent.publish_twist_to_cmd_vel(linear_x, angular_z, 0.01)
+#         time.sleep(0.01)
+
 
 
 @tool 
@@ -285,50 +406,6 @@ def yolo_tool():
         results.append(data)
 
     return results
-
-
-@tool
-def face_detection(target_yaw: float) -> str:
-    """
-    예: 정면을 바라보게 회전하는 명령을 수행.
-    deviance(픽셀 단위 편차)에 따라 회전값 조정.
-    """
-    agent = _get_robot_node()
-
-    while True:
-        x, y, yaw = agent.current_position
-        error = agent.deviance
-
-        # 에러가 작으면 정지
-        if abs(error) < 10:
-            agent.move_flag = False
-            agent.cmd_vel_pub.publish(Twist())  # 정지
-            return (f"정면({target_yaw:.2f} rad) 바라봄")
-
-        logger.info(f"편차: {error}")
-        angular_speed = max(-1.0, min(1.0, error * 0.01))
-        agent.publish_twist_to_cmd_vel(0.0, angular_speed, 0.01)
-        time.sleep(0.01)
-
-
-@tool
-def move_detection(linear_x: float, angular_z: float, duration: float) -> str:
-    """
-    예: 대상으로 부터 멀리 떨어지거나, 가까이 다가가는 동작을 수행.
-    """
-    agent = _get_robot_node()
-    start_time = time.time()
-
-    while True:
-        x, y, yaw = agent.current_position
-        if (time.time()- start_time) > duration:
-            agent.move_flag = False
-            agent.cmd_vel_pub.publish(Twist())  # 정지
-            return (f"이동 완료")
-        
-        agent.publish_twist_to_cmd_vel(linear_x, angular_z, 0.01)
-        time.sleep(0.01)
-
 
 # --------------------------------
 # 실행 함수

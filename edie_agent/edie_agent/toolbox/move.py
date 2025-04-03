@@ -114,16 +114,20 @@ class CustomRobotNode(Node):
         angle_error = (target_angle - yaw + 2 * math.pi) % (2 * math.pi)
         if angle_error > math.pi:
             angle_error -= 2 * math.pi
-        angle_error = round(angle_error, 4)
+        # angle_error = round(angle_error, 6)
 
         # 목표 yaw 오차 계산 (-π ~ π 보정)
         # yaw_error = (self.target_yaw - yaw + 2 * math.pi) % (2 * math.pi)
         yaw_error = (self.target_yaw - yaw + math.pi) % (2 * math.pi) - math.pi
-        yaw_error = round(yaw_error, 4)
+        # yaw_error = round(yaw_error, 6)
 
+
+        angle_error_deg = round(angle_error * 180 / math.pi, 2)
+        yaw_error_deg = round(yaw_error * 180 / math.pi, 2)
+        
         self.get_logger().info(f"distance_error: {distance}")
-        self.get_logger().info(f"angle_error: {angle_error}")
-        self.get_logger().info(f"yaw_error: {yaw_error}")
+        self.get_logger().info(f"angle_error: {angle_error} -> {angle_error_deg}도")
+        self.get_logger().info(f"yaw_error: {yaw_error} -> {yaw_error_deg}도")
 
         return {
             "distance_error": distance,
@@ -269,14 +273,14 @@ def move_to_position(target_x: float, target_y: float, target_yaw: float) -> str
         errors = agent.yaw_error_calculate()
         yaw_err = errors["yaw_error"]
 
-        # 목표 yaw에 도달 판단 (예: 0.1 rad 이내)
-        if abs(yaw_err) < 0.1:
+        # 목표 yaw에 도달 판단 
+        if abs(yaw_err) < 0.01:
             agent.move_flag = False
             agent.cmd_vel_pub.publish(Twist())  # 즉시 정지
             break
             
         # 기본 angular_speed 계산
-        computed_speed = yaw_err * 3
+        computed_speed = yaw_err # * 3
 
         # angular_speed의 절대값이 0보다 크고 2보다 작으면 최소 2로 설정
         if 0 < abs(computed_speed) < 4:
@@ -287,10 +291,21 @@ def move_to_position(target_x: float, target_y: float, target_yaw: float) -> str
         time.sleep(0.05)
 
     # 2) 목표 위치까지 이동
+    first_distance_err = None  # 최초의 distance_error를 저장할 변수
     while True:
         errors = agent.error_calculate()
         distance_err = errors["distance_error"]
         angle_err = errors["angle_error"]
+
+        # 최초 distance_error 저장 (처음 루프에서 한 번)
+        if first_distance_err is None:
+            first_distance_err = distance_err
+
+        # 만약 현재 distance_error가 초기값보다 5만큼 커지면 이동 중단
+        if distance_err > first_distance_err + 2:
+            agent.move_flag = False
+            agent.cmd_vel_pub.publish(Twist())  # 즉시 정지
+            return (f"이동 중단: 초기 distance_error {first_distance_err:.4f}보다 점점 더 커짐 (현재 {distance_err:.4f}) linear_speed를 반대로 해서 다시 할것")
 
         # 목표 위치 도달 판단 (예: 0.1m 이내)
         if distance_err < 0.1:
@@ -301,7 +316,7 @@ def move_to_position(target_x: float, target_y: float, target_yaw: float) -> str
                     f"목표 각도 {target_yaw:.2f} rad 도달.")
                     
         # 기본 angular_speed 계산
-        computed_speed = angle_err * 3
+        computed_speed = angle_err # * 3
 
         # angular_speed의 절대값이 0보다 크고 2보다 작으면 최소 2로 설정
         if 0 < abs(computed_speed) < 4:
@@ -311,10 +326,10 @@ def move_to_position(target_x: float, target_y: float, target_yaw: float) -> str
         if abs(angle_err) > (math.pi / 2):
             linear_speed = -min(3.0, max(1.0, distance_err * 2))
             # 각속도도 부호 반전 (로봇이 목표 방향을 맞추도록)
-            angular_speed = -max(-3.0, min(3.0, computed_speed * 2))
+            angular_speed = -max(-4.0, min(4.0, computed_speed))
         else:
             linear_speed = min(3.0, max(1.0, distance_err * 2))
-            angular_speed = max(-3.0, min(3.0, computed_speed * 2))
+            angular_speed = max(-4.0, min(4.0, computed_speed))
 
         # 방향을 더이상 고려할 필요 없는 경우 전진만 수행 
         if abs(angle_err) < 0.1:
@@ -343,9 +358,9 @@ def rotation_in_place(target_yaw: float) -> str:
 
     while True:
         errors = agent.error_calculate()
-        angle_error = errors["angle_error"]
-
-        if abs(angle_error) < 0.001:  
+        yaw_err = errors["yaw_error"]
+        
+        if abs(yaw_err) < 0.01:  
             agent.move_flag = False
             agent.cmd_vel_pub.publish(Twist())  # 즉시 정지
             return (f"회전 완료: "
@@ -353,7 +368,7 @@ def rotation_in_place(target_yaw: float) -> str:
 
         
         # 기본 angular_speed 계산
-        computed_speed = angle_error
+        computed_speed = yaw_err
 
         # angular_speed의 절대값이 0보다 크고 2보다 작으면 최소 2로 설정
         if 0 < abs(computed_speed) < 4:
@@ -384,7 +399,7 @@ def face_detection(target_yaw: float) -> str:
             return (f"정면({target_yaw:.2f} rad) 바라봄")
 
         # angular_speed의 절대값이 0보다 크고 2보다 작으면 최소 2로 설정
-        if 0 < abs(error) < 2:
+        if 0 < abs(error) < 4:
             error = 4.0 if error > 0 else -4.0
 
         angular_speed = max(-5.0, min(5.0, error))
@@ -392,23 +407,34 @@ def face_detection(target_yaw: float) -> str:
         time.sleep(0.01)
 
 
-# @tool
-# def move_detection(linear_x: float, angular_z: float, duration: float) -> str:
-#     """
-#     예: 대상으로 부터 멀리 떨어지거나, 가까이 다가가는 동작을 수행.
-#     """
-#     agent = _get_robot_node()
-#     start_time = time.time()
+@tool
+def simple_move(linear_x: float, angular_z: float, duration: float) -> str:
+    """
+    간단한 이동 동작 도구 입니다. 
+    선속도 (linear_x),
+    각속도 (angular_z)
+    를 제어하여 duration(초)동안 움직입니다. 
+    전진 및 후진은 각속도 (angular_z)는 0.0이고 선속도 (linear_x)만 제어합니다.
+    제자리 회전은 선속도 (linear_x)는 0.0이고 각속도 (angular_z)만 제어합니다.
+    """
+    agent = _get_robot_node()
+    start_time = time.time()
 
-#     while True:
-#         x, y, yaw = agent.current_position
-#         if (time.time()- start_time) > duration:
-#             agent.move_flag = False
-#             agent.cmd_vel_pub.publish(Twist())  # 정지
-#             return (f"이동 완료")
-        
-#         agent.publish_twist_to_cmd_vel(linear_x, angular_z, 0.01)
-#         time.sleep(0.01)
+    while True:
+        x, y, yaw = agent.current_position
+        if (time.time()- start_time) > duration:
+            agent.move_flag = False
+            agent.cmd_vel_pub.publish(Twist())  # 정지
+            return (f"이동 완료")
+
+        if 0 < abs(linear_x) < 3:
+            linear_x = 3.0 if linear_x > 0 else -3.0
+
+        if 0 < abs(angular_z) < 4:
+            angular_z = 4.0 if angular_z > 0 else -4.0
+
+        agent.publish_twist_to_cmd_vel(linear_x, angular_z, 0.01)
+        time.sleep(0.01)
 
 
 

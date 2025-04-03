@@ -285,10 +285,10 @@ def move_to_position(target_x: float, target_y: float, target_yaw: float) -> str
 
         if distance_err > 0:    # 전진
             linear_speed = min(3.0, max(1.0, distance_err * 2))  
-            angular_speed = max(-2.0, min(2.0, angle_err * 2))
+            angular_speed = -max(-2.0, min(2.0, angle_err * 2))
         else:                   # 후진 
             linear_speed = max(-3.0, min(-1.0, distance_err * 2))  
-            angular_speed = -max(-2.0, min(2.0, angle_err * 2))
+            angular_speed = max(-2.0, min(2.0, angle_err * 2))
 
         # 짧은 시간(예: 0.05초)별로 이동 명령
         agent.publish_twist_to_cmd_vel(linear_speed, angular_speed, 0.05)

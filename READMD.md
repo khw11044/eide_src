@@ -14,7 +14,7 @@ source install/setup.bash
 
 ### yolo 보기
 
-yolo 실행하여 그 결과값 확인 
+yolo 실행하여 그 결과값 pub
 ```
 ros2 run yolov11_ros yolov11_msg_publisher
 ```

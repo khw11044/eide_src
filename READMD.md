@@ -51,6 +51,18 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r /cmd_vel:=/ed
 ros2 run edie8_test_gui edie8_test_gui
 ```
 
+모터 제어 
+
 ```
 ros2 topic pub /edie8/diff_drive_controller/cmd_vel_unstamped geometry_msgs/msg/Twist "{linear: {x: 2.2, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"
+```
+
+왼쪽 귀 제어 
+```
+ros2 topic pub /edie8_l_ear_position_controller/commands std_msgs/msg/Float64MultiArray "{data: [0.5]}"
+```
+
+오른쪽 귀 제어 
+```
+ros2 topic pub /edie8_l_ear_position_controller/commands std_msgs/msg/Float64MultiArray "{data: [0.5]}"
 ```

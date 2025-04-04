@@ -8,9 +8,11 @@ from .StateNode import _get_robot_node
 def action_ears(left_pos: float = 1.0, right_pos: float = 1.0) -> str:
     """
     왼쪽/오른쪽 귀의 위치를 제어합니다. 
-    왼쪽 귀 left_pos와 오른쪽 귀 right_pos 값의 범위는 [0.0 ~ 1.0] 입니다.
+    left_pos와 right_pos 값의 범위는 [0.0 - 1.0] 입니다.
     현재 상태는 StateNode 내부 변수로 저장됩니다.
-    대화를 할때 귀를 움직입니다. 귀를 움직이기 위해 해당 도구 함수를 사용합니다.
+    대화를 할때 귀를 움직입니다. 
+    왼쪽 귀만 움직일때, right_pos는 0.0이고 left_pos의 값을 제어합니다. 
+    오른쪽 귀만 움직일때, left_pos는 0.0이고 right_pos의 값을 제어합니다. 
     """
     agent = _get_robot_node()
     agent.left_ear_position = left_pos
@@ -35,7 +37,7 @@ def wave_ears(count: int = 3, amplitude: float = 1.0, interval: float = 0.5) -> 
     """
     귀를 교차로 흔듭니다.
     - count: 반복 횟수
-    - amplitude: 귀의 최대 각도 (예: 1.0)
+    - amplitude: 귀의 최대 각도 Range [0.0 - 1.0]
     - interval: 귀를 바꿔 흔드는 시간 간격 (초)
     """
     agent = _get_robot_node()

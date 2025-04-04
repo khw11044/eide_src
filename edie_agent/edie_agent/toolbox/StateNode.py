@@ -10,31 +10,60 @@ from rclpy.node import Node
 
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
+from std_msgs.msg import Float64MultiArray
+
+
 from yolo_perception.msg import DetectionArray
+
 
 logger = logging.getLogger(__name__)
 
 class CustomRobotNode(Node):
     def __init__(self):
         super().__init__("custom_robot_node")
+        # 위치 오돔 관련 
         self.current_position = (0.0, 0.0, 0.0)
         self.odom_received = False
         self.deviance = 0
         self.target_x = None
         self.target_y = None
         self.target_yaw = None
+        # 이동 관련 
         self.move_flag = False
         self.move_start_time = 0.0
         self.move_duration = 0.0
         self.cur_linear_x = 0.0
         self.cur_angular_z = 0.0
+        # 귀 움직임 관련 
+        self.left_ear_position = 0.0
+        self.right_ear_position = 0.0
+        # 다리 움직임 관련 
+        self.left_leg_position = 0.0
+        self.right_leg_position = 0.0
 
+        # 위치 오돔 관련 퍼블리셔
         self.odom_sub = self.create_subscription(
             Odometry, "/edie8/diff_drive_controller/odom", self.odom_callback, 10
         )
+        # 이동 관련 
         self.cmd_vel_pub = self.create_publisher(
             Twist, "/edie8/diff_drive_controller/cmd_vel_unstamped", 10
         )
+        # 귀 움직임 관련 퍼블리셔
+        self.left_ear_pub = self.create_publisher(
+            Float64MultiArray, "/edie8_l_ear_position_controller/commands", 10
+        )
+        self.right_ear_pub = self.create_publisher(
+            Float64MultiArray, "/edie8_r_ear_position_controller/commands", 10
+        )
+        # 다리 움직임 관련 퍼블리셔 
+        self.left_leg_pub = self.create_publisher(
+            Float64MultiArray, "/edie8_l_leg_position_controller/commands", 10
+        )
+        self.right_leg_pub = self.create_publisher(
+            Float64MultiArray, "/edie8_r_leg_position_controller/commands", 10
+        )
+        # 시각 관련 퍼블리셔 
         self.detection_result = []
         self.yolo_sub = self.create_subscription(
             DetectionArray, "/detection_results", self.yolo_callback, 10
@@ -71,9 +100,6 @@ class CustomRobotNode(Node):
         self.get_logger().info(f"목표 위치 설정: ({x:.2f}, {y:.2f}, {yaw:.2f})")
 
     def error_calculate(self) -> dict:
-        """
-        목표 위치( self.target_x, self.target_y )로부터의 거리/각도 오차 계산.
-        """
         if self.target_x is None or self.target_y is None or self.target_yaw is None:
             return {"distance_error": 0.0, "angle_error": 0.0, "yaw_error": 0.0}
 
@@ -81,8 +107,7 @@ class CustomRobotNode(Node):
         dx = self.target_x - x
         dy = self.target_y - y
 
-        # 목표 이동 거리 계산
-        distance = round(math.sqrt(dx**2 + dy**2), 4)
+        distance = round(math.sqrt(dx**2 + dy**2), 4)       # 목표 이동 거리 계산
 
         # 목표 각도 계산
         target_angle = math.atan2(dy, dx)
@@ -110,12 +135,6 @@ class CustomRobotNode(Node):
             "yaw_error": yaw_error
         }
 
-    def yaw_error_calculate(self):
-        if self.target_yaw is None:
-            return {"yaw_error": 0.0}
-        _, _, yaw = self.current_position
-        yaw_error = (self.target_yaw - yaw + math.pi) % (2 * math.pi) - math.pi
-        return {"yaw_error": yaw_error}
 
     def publish_twist_to_cmd_vel(self, linear_x, angular_z, duration):
         self.cur_linear_x = linear_x
@@ -136,6 +155,21 @@ class CustomRobotNode(Node):
                 self.cmd_vel_pub.publish(Twist())
                 self.move_flag = False
 
+    def publish_ear_position(self):
+        left_msg = Float64MultiArray()
+        right_msg = Float64MultiArray()
+        left_msg.data = [self.left_ear_position]
+        right_msg.data = [self.right_ear_position]
+        self.left_ear_pub.publish(left_msg)
+        self.right_ear_pub.publish(right_msg)
+
+    def publish_leg_position(self):
+        left_msg = Float64MultiArray()
+        right_msg = Float64MultiArray()
+        left_msg.data = [self.left_leg_position]
+        right_msg.data = [self.right_leg_position]
+        self.left_leg_pub.publish(left_msg)
+        self.right_leg_pub.publish(right_msg)
 
 # -------------------------------------------------
 # ✅ 여기에 싱글턴 _get_robot_node 함수 정의!

@@ -32,6 +32,8 @@ def get_prompts():
             "<ROSA_INSTRUCTIONS> For movement tasks, use the 'get_robot_pose' tool and calculation tools to specify the target position based on the robot's heading. "
             "<ROSA_INSTRUCTIONS> You must always plan and execute movement tasks considering the robot's heading. "
             "<ROSA_INSTRUCTIONS> You must determine the target position based on the robot's heading using the 'get_robot_pose' tool."
+            "<ROSA_INSTRUCTIONS> When the robot is talking to you, Eddie robot moves robot's ears several times at random."
+            "Randomly move the robot's legs."
 
             "All movement commands and tool calls must be executed sequentially, not in parallel. "
             "You must wait for each command to complete before issuing the next one."
@@ -49,6 +51,7 @@ def get_prompts():
             "Linear velocity should be between -5.0 and 5.0 m/s, and angular velocity between -5.0 and 5.0 rad/s. "
             "Always use get_robot_pose to check the position. "
             "The movement is considered successful if the error from the target is within 0.1m."
+            
         ),
         
         about_your_environment=(

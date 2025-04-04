@@ -15,7 +15,9 @@ from rich.text import Text
 
 
 from rosa import ROSA
+from .toolbox import watch as watch_tool
 from .toolbox import move as move_tool
+from .toolbox import action as action_tool
 from .utils.help import get_help
 from .utils.llm import get_llm
 from .prompts.prompt import get_prompts
@@ -39,7 +41,7 @@ class EDIEAgent(ROSA):
         super().__init__(
             llm=self.__llm,
             tools=[cool_edie_tool],
-            tool_packages=[move_tool],
+            tool_packages=[watch_tool, move_tool, action_tool],
             blacklist=self.__blacklist,
             prompts=self.__prompts,
             verbose=verbose,

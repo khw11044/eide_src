@@ -59,10 +59,19 @@ ros2 topic pub /edie8/diff_drive_controller/cmd_vel_unstamped geometry_msgs/msg/
 
 왼쪽 귀 제어 
 ```
-ros2 topic pub /edie8_l_ear_position_controller/commands std_msgs/msg/Float64MultiArray "{data: [0.5]}"
+ros2 topic pub /edie8_l_ear_position_controller/commands std_msgs/msg/Float64MultiArray "{data: [1.0]}"
 ```
 
 오른쪽 귀 제어 
 ```
-ros2 topic pub /edie8_l_ear_position_controller/commands std_msgs/msg/Float64MultiArray "{data: [0.5]}"
+ros2 topic pub /edie8_r_ear_position_controller/commands std_msgs/msg/Float64MultiArray "{data: [1.0]}"
+```
+
+
+다리 제어 
+
+
+```
+ros2 topic pub /edie8_l_leg_position_controller/commands std_msgs/msg/Float64MultiArray "{data: [-0.02]}"
+ros2 topic pub /edie8_r_leg_position_controller/commands std_msgs/msg/Float64MultiArray "{data: [-0.02]}"
 ```
